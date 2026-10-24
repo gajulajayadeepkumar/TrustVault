@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  trustvault-app:
+    build: .
+    container_name: trustvault-platform
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TRUSTVAULT_SECRET_KEY=${TRUSTVAULT_SECRET_KEY:?Set TRUSTVAULT_SECRET_KEY in your environment}
+      - TRUSTVAULT_SESSION_EXPIRE=7200
+      - TRUSTVAULT_MAX_LOGIN_ATTEMPTS=5
+    volumes:
+      - vault_data:/app/storage_vault
+      - db_data:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  vault_data:
+  db_data:

@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+.env
+.env.*
+!.env.example
+
+# Local databases and backups
+*.db
+*.sqlite
+*.sqlite3
+*.backup
+*.zip
+
+# Uploaded documents and local storage
+storage_vault/
+uploads/
+secrets/
+instance/
+
+# Old Git history backup
+.git_old_backup/
+
+# Cloudflare executable
+cloudflared.exe
+
+# Python environments
+venv/
+.venv/

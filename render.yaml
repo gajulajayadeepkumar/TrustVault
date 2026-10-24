@@ -1,0 +1,24 @@
+# Render Blueprint Specification for TrustVault
+services:
+  - type: web
+    name: trustvault-platform
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt && python seed_data.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    disk:
+      name: trustvault-storage
+      mountPath: /opt/render/project/src/storage_vault
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: TRUSTVAULT_SECRET_KEY
+        generateValue: true
+      - key: TRUSTVAULT_SESSION_EXPIRE
+        value: "7200"
+      - key: TRUSTVAULT_MAX_LOGIN_ATTEMPTS
+        value: "5"
+      - key: TRUSTVAULT_LOCKOUT_SECONDS
+        value: "900"
