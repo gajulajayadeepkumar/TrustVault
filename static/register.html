@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — TrustVault Secure Document Management</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+</head>
+<body class="auth-page">
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <a href="/login" class="brand">
+      <div class="brand-icon">🛡️</div>
+      <div>
+        <div class="brand-title">TrustVault</div>
+        <div class="brand-subtitle">Zero-Trust Document Security</div>
+      </div>
+    </a>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <a href="/auth/login" class="btn-action" style="text-decoration: none; padding: 0.5rem 1rem;">
+        <span>🔒</span> Sign In
+      </a>
+    </div>
+  </header>
+
+  <!-- Register Card Container -->
+  <div class="auth-wrapper">
+    <div class="auth-card register-card">
+      <div class="auth-header">
+        <div class="auth-logo-shield">🛡️</div>
+        <h1 class="auth-title">Create Your Account</h1>
+        <p class="auth-subtitle">Join TrustVault with Role-Based Separation</p>
+      </div>
+
+      <!-- Alert Box -->
+      <div id="authAlert" class="auth-alert" role="alert">
+        <span id="authAlertIcon" class="auth-alert-icon">⚠️</span>
+        <div id="authAlertMessage"></div>
+      </div>
+
+      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" novalidate>
+        <input type="hidden" id="csrfToken" name="csrf_token" value="">
+
+        <!-- Full Name -->
+        <div class="form-group">
+          <label class="form-label" for="regFullName">Full Name</label>
+          <input
+            type="text"
+            id="regFullName"
+            name="full_name"
+            class="form-control"
+            placeholder="e.g. Sarah Connor"
+            required
+            autocomplete="name"
+            autofocus
+          >
+        </div>
+
+        <!-- Email Address -->
+        <div class="form-group">
+          <label class="form-label" for="regEmail">Email Address</label>
+          <input
+            type="email"
+            id="regEmail"
+            name="email"
+            class="form-control"
+            placeholder="sarah@company.com"
+            required
+            autocomplete="email"
+          >
+          <div class="form-hint">Used for authentication and audit log tracking.</div>
+        </div>
+
+        <!-- Requested Role -->
+        <div class="form-group">
+          <label class="form-label" for="regRole">Requested Role</label>
+          <select id="regRole" name="role" class="form-control" required>
+            <option value="VIEWER" selected>Viewer (Read-only access to explicitly shared files)</option>
+            <option value="OWNER">Document Owner (Can upload, manage, and share documents)</option>
+          </select>
+          <div class="form-hint-info">
+            <span>ℹ️</span>
+            <div>Administrator accounts cannot be self-registered and require pre-provisioned administrative authority.</div>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label" for="regPassword">Password</label>
+          <input
+            type="password"
+            id="regPassword"
+            name="password"
+            class="form-control"
+            placeholder="Create a strong password"
+            required
+            autocomplete="new-password"
+            oninput="checkPasswordStrength()"
+          >
+
+          <!-- Password Strength Real-Time Checklist -->
+          <div class="pwd-checklist" id="pwdChecklist">
+            <div class="pwd-rule" id="ruleLength">
+              <span class="pwd-rule-icon">○</span> At least 8 characters
+            </div>
+            <div class="pwd-rule" id="ruleUpper">
+              <span class="pwd-rule-icon">○</span> Uppercase letter (A-Z)
+            </div>
+            <div class="pwd-rule" id="ruleLower">
+              <span class="pwd-rule-icon">○</span> Lowercase letter (a-z)
+            </div>
+            <div class="pwd-rule" id="ruleDigit">
+              <span class="pwd-rule-icon">○</span> Number (0-9)
+            </div>
+            <div class="pwd-rule" id="ruleSpecial" style="grid-column: span 2;">
+              <span class="pwd-rule-icon">○</span> Special character (!@#$%^&*...)
+            </div>
+          </div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="form-group">
+          <label class="form-label" for="regConfirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            id="regConfirmPassword"
+            name="confirm_password"
+            class="form-control"
+            placeholder="Re-enter password"
+            required
+            autocomplete="new-password"
+            oninput="checkPasswordMatch()"
+          >
+          <div id="pwdMatchMsg" class="pwd-match-indicator"></div>
+        </div>
+
+        <button type="submit" id="registerSubmitBtn" class="btn-verify" style="width: 100%; justify-content: center; margin-top: 1.5rem;">
+          <span>✨</span> Register Account
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="/auth/login" class="auth-link">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let csrfTokenVal = "";
+    async function loadCsrfToken() {
+      try {
+        const res = await fetch("/api/auth/csrf-token");
+        if (res.ok) {
+          const data = await res.json();
+          csrfTokenVal = data.csrf_token;
+          const tokenInput = document.getElementById("csrfToken");
+          if (tokenInput) tokenInput.value = csrfTokenVal;
+        }
+      } catch (e) {
+        console.warn("Could not retrieve CSRF token:", e);
+      }
+    }
+
+    function showAlert(message, type = "danger") {
+      const alertBox = document.getElementById("authAlert");
+      const alertMsg = document.getElementById("authAlertMessage");
+      const alertIcon = document.getElementById("authAlertIcon");
+
+      alertBox.className = `auth-alert ${type}`;
+      alertMsg.textContent = message;
+      alertIcon.textContent = type === "success" ? "✓" : "⚠️";
+      alertBox.style.display = "flex";
+      alertBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function hideAlert() {
+      const alertBox = document.getElementById("authAlert");
+      alertBox.style.display = "none";
+    }
+
+    function updateRule(elementId, isValid) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.classList.toggle("valid", isValid);
+      const icon = el.querySelector(".pwd-rule-icon");
+      if (icon) {
+        icon.textContent = isValid ? "✓" : "○";
+      }
+    }
+
+    function checkPasswordStrength() {
+      const val = document.getElementById("regPassword").value;
+      const hasLength = val.length >= 8;
+      const hasUpper = /[A-Z]/.test(val);
+      const hasLower = /[a-z]/.test(val);
+      const hasDigit = /[0-9]/.test(val);
+      const hasSpecial = /[^a-zA-Z0-9]/.test(val);
+
+      updateRule("ruleLength", hasLength);
+      updateRule("ruleUpper", hasUpper);
+      updateRule("ruleLower", hasLower);
+      updateRule("ruleDigit", hasDigit);
+      updateRule("ruleSpecial", hasSpecial);
+
+      checkPasswordMatch();
+      return hasLength && hasUpper && hasLower && hasDigit && hasSpecial;
+    }
+
+    function checkPasswordMatch() {
+      const p1 = document.getElementById("regPassword").value;
+      const p2 = document.getElementById("regConfirmPassword").value;
+      const matchMsg = document.getElementById("pwdMatchMsg");
+
+      if (!p2) {
+        matchMsg.style.display = "none";
+        return false;
+      }
+
+      if (p1 === p2) {
+        matchMsg.className = "pwd-match-indicator matched";
+        matchMsg.textContent = "✓ Passwords match";
+        return true;
+      } else {
+        matchMsg.className = "pwd-match-indicator mismatch";
+        matchMsg.textContent = "⚠️ Passwords do not match";
+        return false;
+      }
+    }
+
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      hideAlert();
+
+      const fullName = document.getElementById("regFullName").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const role = document.getElementById("regRole").value;
+      const password = document.getElementById("regPassword").value;
+      const confirmPassword = document.getElementById("regConfirmPassword").value;
+      const submitBtn = document.getElementById("registerSubmitBtn");
+
+      // Client-side validations
+      if (!fullName) {
+        showAlert("Please provide your full name.");
+        document.getElementById("regFullName").focus();
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        showAlert("Please enter a valid email address.");
+        document.getElementById("regEmail").focus();
+        return;
+      }
+
+      if (!checkPasswordStrength()) {
+        showAlert("Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.");
+        document.getElementById("regPassword").focus();
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showAlert("Passwords do not match. Please re-enter.");
+        document.getElementById("regConfirmPassword").focus();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "<span>⏳</span> Creating Account...";
+
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfTokenVal
+          },
+          body: JSON.stringify({
+            full_name: fullName,
+            email: email,
+            role: role,
+            password: password,
+            confirm_password: confirmPassword,
+            csrf_token: csrfTokenVal
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || "Registration failed. Please check your information and try again.");
+        }
+
+        // Store session token if returned for immediate secure sign in
+        if (data.token) {
+          localStorage.setItem("tv_token", data.token);
+          if (data.user) {
+            sessionStorage.setItem("tv_current_role", data.user.role);
+          }
+        }
+
+        showAlert("Account registered successfully! Redirecting to TrustVault...", "success");
+
+        setTimeout(() => {
+          // If token was stored, go to dashboard; else redirect to login with registered notice
+          if (data.token) {
+            window.location.href = "/";
+          } else {
+            window.location.href = "/auth/login?registered=1";
+          }
+        }, 1000);
+
+      } catch (err) {
+        showAlert(err.message, "danger");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "<span>✨</span> Register Account";
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      loadCsrfToken();
+    });
+  </script>
+</body>
+</html>

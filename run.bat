@@ -7,6 +7,7 @@ echo =========================================================================
 echo.
 
 echo [1/3] Checking environment & dependencies...
+if "%TRUSTVAULT_SECRET_KEY%"=="" set TRUSTVAULT_SECRET_KEY=local-dev-secret-key-trustvault-change-in-production-123456
 python -m pip install -r requirements.txt --quiet
 
 echo [2/3] Seeding demo accounts and confidential sample documents...

@@ -85,7 +85,7 @@ def get_all_users(
     """Admin-only list of all user accounts and status."""
     cursor = db.cursor()
     cursor.execute("""
-        SELECT id, username, email, role, is_active, failed_login_attempts, locked_until, created_at
+        SELECT id, username, full_name, email, role, is_active, failed_login_attempts, locked_until, created_at
         FROM users
         ORDER BY id ASC
     """)
@@ -94,6 +94,7 @@ def get_all_users(
         {
             "id": u["id"],
             "username": u["username"],
+            "full_name": u["full_name"] if "full_name" in u.keys() and u["full_name"] else u["username"],
             "email": u["email"],
             "role": u["role"],
             "is_active": bool(u["is_active"]),

@@ -36,9 +36,20 @@ def init_db(db_path: Path = DATABASE_PATH):
         is_active INTEGER DEFAULT 1,
         failed_login_attempts INTEGER DEFAULT 0,
         locked_until TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        updated_at TEXT
     );
     """)
+
+    # Non-destructive schema migration for existing databases
+    cursor.execute("PRAGMA table_info(users);")
+    user_columns = {col[1] for col in cursor.fetchall()}
+    if "full_name" not in user_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN full_name TEXT DEFAULT '';")
+        cursor.execute("UPDATE users SET full_name = username WHERE full_name IS NULL OR full_name = '';")
+    if "updated_at" not in user_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN updated_at TEXT;")
+        cursor.execute("UPDATE users SET updated_at = created_at WHERE updated_at IS NULL;")
 
     # Active Sessions Table
     cursor.execute("""

@@ -3,23 +3,30 @@ from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 class UserRegisterRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_\-\.]+$")
-    email: EmailStr
-    password: str = Field(..., min_length=8, max_length=128)
-    role: str = Field(..., pattern=r"^(ADMIN|OWNER|VIEWER)$")
+    full_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    username: Optional[str] = Field(None, min_length=1, max_length=50, pattern=r"^[a-zA-Z0-9_\-\.]+$")
+    email: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=1, max_length=128)
+    confirm_password: Optional[str] = Field(None, min_length=1, max_length=128)
+    role: Optional[str] = Field("VIEWER")
+    csrf_token: Optional[str] = Field(None, max_length=256)
 
 class UserLoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    username: str = Field(..., min_length=1, max_length=50)
+    email: Optional[str] = Field(None, max_length=255)
+    username: Optional[str] = Field(None, max_length=255)
     password: str = Field(..., min_length=1, max_length=128)
+    csrf_token: Optional[str] = Field(None, max_length=256)
 
 class UserResponse(BaseModel):
     id: int
     username: str
+    full_name: Optional[str] = ""
     email: str
     role: str
     is_active: bool
     created_at: str
+    updated_at: Optional[str] = None
 
 class UserProfileResponse(BaseModel):
     user: UserResponse

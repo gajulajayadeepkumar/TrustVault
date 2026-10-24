@@ -12,11 +12,21 @@ let searchDebounceTimer = null;
 // ==========================================================================
 // API Client Helper
 // ==========================================================================
+function getCsrfCookie() {
+  const match = document.cookie.match(/(?:^|;\s*)tv_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
 async function api(endpoint, options = {}) {
   const token = localStorage.getItem("tv_token");
+  const csrf = getCsrfCookie();
   const headers = {
     ...options.headers
   };
+
+  if (csrf && !headers["X-CSRF-Token"]) {
+    headers["X-CSRF-Token"] = csrf;
+  }
 
   if (token && !headers["Authorization"]) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -83,112 +93,138 @@ async function checkAuth() {
   }
 }
 
+
 function renderAuthState() {
   const loginSec = document.getElementById("loginSection");
   const appSec = document.getElementById("appSection");
   const userMenu = document.getElementById("userMenu");
+  const navAuthLinks = document.getElementById("navAuthLinks");
   const tabBtnAdmin = document.getElementById("tabBtnAdmin");
   const adminPrivacyBanner = document.getElementById("adminPrivacyBanner");
   const viewerUploadWarning = document.getElementById("viewerUploadWarning");
 
   if (currentUser) {
-    loginSec.style.display = "none";
-    appSec.style.display = "block";
-    userMenu.style.display = "flex";
+    if (loginSec) loginSec.style.display = "none";
+    if (appSec) appSec.style.display = "block";
+    if (userMenu) userMenu.style.display = "flex";
+    if (navAuthLinks) navAuthLinks.style.display = "none";
 
-    document.getElementById("navUsername").textContent = currentUser.username;
+    const displayName = currentUser.full_name || currentUser.username;
+    const nameEl = document.getElementById("navUsername");
+    if (nameEl) nameEl.textContent = displayName;
+
     const badge = document.getElementById("navRoleBadge");
-    badge.textContent = currentUser.role;
-    badge.className = `role-badge role-${currentUser.role}`;
+    if (badge) {
+      badge.textContent = currentUser.role;
+      badge.className = `role-badge role-${currentUser.role}`;
+    }
+
+    // Role-based dashboard routing
+    const storedRoleTarget = sessionStorage.getItem("tv_current_role");
+    if (storedRoleTarget === "ADMIN" || currentUser.role === "ADMIN") {
+      if (storedRoleTarget) {
+        sessionStorage.removeItem("tv_current_role");
+        switchTab("admin");
+      }
+    } else {
+      if (storedRoleTarget) {
+        sessionStorage.removeItem("tv_current_role");
+        switchTab("vault");
+      }
+    }
 
     // Admin-specific UI elements
     if (currentUser.role === "ADMIN") {
-      tabBtnAdmin.style.display = "flex";
-      adminPrivacyBanner.style.display = "block";
-      viewerUploadWarning.style.display = "none";
+      if (tabBtnAdmin) tabBtnAdmin.style.display = "flex";
+      if (adminPrivacyBanner) adminPrivacyBanner.style.display = "block";
+      if (viewerUploadWarning) viewerUploadWarning.style.display = "none";
       loadAdminMetrics();
     } else {
-      tabBtnAdmin.style.display = "none";
-      adminPrivacyBanner.style.display = "none";
+      if (tabBtnAdmin) tabBtnAdmin.style.display = "none";
+      if (adminPrivacyBanner) adminPrivacyBanner.style.display = "none";
     }
 
     // Viewer-specific restrictions
+    const uploadBtn = document.getElementById("uploadSubmitBtn");
     if (currentUser.role === "VIEWER") {
-      viewerUploadWarning.style.display = "block";
-      document.getElementById("uploadSubmitBtn").disabled = true;
-      document.getElementById("uploadSubmitBtn").style.opacity = "0.5";
+      if (viewerUploadWarning) viewerUploadWarning.style.display = "block";
+      if (uploadBtn) {
+        uploadBtn.disabled = true;
+        uploadBtn.style.opacity = "0.5";
+      }
     } else {
-      viewerUploadWarning.style.display = "none";
-      document.getElementById("uploadSubmitBtn").disabled = false;
-      document.getElementById("uploadSubmitBtn").style.opacity = "1";
+      if (viewerUploadWarning) viewerUploadWarning.style.display = "none";
+      if (uploadBtn) {
+        uploadBtn.disabled = false;
+        uploadBtn.style.opacity = "1";
+      }
     }
-
-    highlightDemoButton(currentUser.username);
   } else {
-    loginSec.style.display = "block";
-    appSec.style.display = "none";
-    userMenu.style.display = "none";
-    highlightDemoButton(null);
+    if (loginSec) loginSec.style.display = "block";
+    if (appSec) appSec.style.display = "none";
+    if (userMenu) userMenu.style.display = "none";
+    if (navAuthLinks) navAuthLinks.style.display = "flex";
   }
-}
-
-function highlightDemoButton(username) {
-  document.getElementById("demoBtnAdmin").classList.toggle("active", username === "admin");
-  document.getElementById("demoBtnAlice").classList.toggle("active", username === "owner_alice");
-  document.getElementById("demoBtnBob").classList.toggle("active", username === "viewer_bob");
 }
 
 async function handleLogin(e) {
   e.preventDefault();
-  const username = document.getElementById("loginUsername").value.trim();
+  const emailInput = document.getElementById("loginEmail");
+  const email = emailInput ? emailInput.value.trim() : "";
   const password = document.getElementById("loginPassword").value;
+  const loginBtn = document.getElementById("indexLoginBtn");
+
+  if (!email || !password) {
+    showToast("Please enter both email address and password.", "error");
+    return;
+  }
+
+  if (loginBtn) {
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Verifying...";
+  }
 
   try {
+    const csrfToken = getCsrfCookie();
     const data = await api("/api/auth/login", {
       method: "POST",
-      body: { username, password }
+      headers: {
+        "X-CSRF-Token": csrfToken
+      },
+      body: { email, password, csrf_token: csrfToken }
     });
     localStorage.setItem("tv_token", data.token);
     currentUser = data.user;
+    
+    // Store role target for dashboard routing
+    sessionStorage.setItem("tv_current_role", currentUser.role);
+
     renderAuthState();
     loadDocuments();
-    showToast(`Welcome to TrustVault, ${currentUser.username}!`, "success");
+    showToast(`Welcome to TrustVault, ${currentUser.full_name || currentUser.username}!`, "success");
   } catch (err) {
     showToast(err.message, "error");
+  } finally {
+    if (loginBtn) {
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Authenticate to Vault";
+    }
   }
-}
-
-async function quickLogin(username, password) {
-  try {
-    const data = await api("/api/auth/login", {
-      method: "POST",
-      body: { username, password }
-    });
-    localStorage.setItem("tv_token", data.token);
-    currentUser = data.user;
-    renderAuthState();
-    loadDocuments();
-    showToast(`Switched account to ${username} (${currentUser.role})`, "info");
-  } catch (err) {
-    showToast(err.message, "error");
-  }
-}
-
-function quickFill(username, password) {
-  document.getElementById("loginUsername").value = username;
-  document.getElementById("loginPassword").value = password;
 }
 
 async function handleLogout() {
   try {
-    await api("/api/auth/logout", { method: "POST" });
+    const csrfToken = getCsrfCookie();
+    await api("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrfToken }
+    });
   } catch (e) {
     // ignore
   }
   localStorage.removeItem("tv_token");
   currentUser = null;
-  renderAuthState();
-  showToast("You have been securely signed out.", "info");
+  window.location.href = "/auth/login";
 }
 
 // ==========================================================================

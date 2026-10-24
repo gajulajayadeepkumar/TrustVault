@@ -6,6 +6,9 @@ Write-Host "====================================================================
 Write-Host ""
 
 Write-Host "[1/3] Checking environment & dependencies..." -ForegroundColor Yellow
+if (-not $env:TRUSTVAULT_SECRET_KEY) {
+    $env:TRUSTVAULT_SECRET_KEY = "local-dev-secret-key-trustvault-change-in-production-123456"
+}
 python -m pip install -r requirements.txt --quiet
 
 Write-Host "[2/3] Seeding demo accounts and confidential sample documents..." -ForegroundColor Yellow

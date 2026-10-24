@@ -19,12 +19,10 @@
       </div>
     </div>
 
-    <!-- Quick Role Switcher for Evaluator -->
-    <div class="demo-switcher" id="demoSwitcher">
-      <span class="demo-switcher-label">Demo Switcher:</span>
-      <button class="demo-btn" id="demoBtnAdmin" onclick="quickLogin('admin', 'Admin@TrustVault2026!')">👑 Admin</button>
-      <button class="demo-btn" id="demoBtnAlice" onclick="quickLogin('owner_alice', 'Alice@TrustVault2026!')">👤 Alice (Owner)</button>
-      <button class="demo-btn" id="demoBtnBob" onclick="quickLogin('viewer_bob', 'Bob@TrustVault2026!')">👁️ Bob (Viewer)</button>
+    <!-- Unauthenticated Links -->
+    <div class="nav-auth-links" id="navAuthLinks" style="display: none; align-items: center; gap: 0.75rem;">
+      <a href="/auth/login" class="btn-action" style="text-decoration: none; padding: 0.45rem 0.9rem;">Sign In</a>
+      <a href="/auth/register" class="btn-action primary" style="text-decoration: none; padding: 0.45rem 0.9rem;">Register</a>
     </div>
 
     <!-- Current User Info -->
@@ -36,7 +34,7 @@
   </header>
 
   <!-- Login Modal / Screen (Visible when not authenticated) -->
-  <div id="loginSection" class="container" style="max-width: 460px; margin-top: 5rem; display: none;">
+  <div id="loginSection" class="container" style="max-width: 480px; margin-top: 5rem; display: none;">
     <div class="doc-card" style="padding: 2.25rem;">
       <div style="text-align: center; margin-bottom: 1.75rem;">
         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🛡️</div>
@@ -46,25 +44,20 @@
 
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
-          <label class="form-label" for="loginUsername">Username</label>
-          <input type="text" id="loginUsername" class="form-control" placeholder="admin / owner_alice / viewer_bob" required>
+          <label class="form-label" for="loginEmail">Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="name@company.com" required autofocus>
         </div>
         <div class="form-group">
           <label class="form-label" for="loginPassword">Password</label>
           <input type="password" id="loginPassword" class="form-control" placeholder="Enter secure password" required>
         </div>
-        <button type="submit" class="btn-verify" style="width: 100%; justify-content: center; margin-top: 1rem;">
+        <button type="submit" id="indexLoginBtn" class="btn-verify" style="width: 100%; justify-content: center; margin-top: 1rem;">
           Authenticate to Vault
         </button>
       </form>
 
-      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); font-size: 0.8rem; color: var(--text-muted); text-align: center;">
-        <p style="margin-bottom: 0.5rem; font-weight: 600;">Demo Accounts Available:</p>
-        <div style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
-          <span class="role-badge role-ADMIN" style="cursor: pointer;" onclick="quickFill('admin', 'Admin@TrustVault2026!')">admin</span>
-          <span class="role-badge role-OWNER" style="cursor: pointer;" onclick="quickFill('owner_alice', 'Alice@TrustVault2026!')">owner_alice</span>
-          <span class="role-badge role-VIEWER" style="cursor: pointer;" onclick="quickFill('viewer_bob', 'Bob@TrustVault2026!')">viewer_bob</span>
-        </div>
+      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); font-size: 0.88rem; color: var(--text-muted); text-align: center;">
+        Don't have an account? <a href="/auth/register" class="auth-link">Register here</a>
       </div>
     </div>
   </div>

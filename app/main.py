@@ -1,7 +1,7 @@
 from pathlib import Path
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.database import init_db
 from app.routes import (
@@ -60,11 +60,33 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.get("/", include_in_schema=False)
-async def serve_index():
+async def serve_root(request: Request):
+    if "tv_session" not in request.cookies:
+        return RedirectResponse(url="/auth/login", status_code=302)
     index_file = STATIC_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return {"message": "TrustVault API is running. Visit /docs for OpenAPI documentation."}
+    return RedirectResponse(url="/auth/login", status_code=302)
+
+@app.get("/dashboard", include_in_schema=False)
+async def serve_dashboard():
+    index_file = STATIC_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return RedirectResponse(url="/auth/login", status_code=302)
+
+@app.get("/login", include_in_schema=False)
+@app.get("/auth/login", include_in_schema=False)
+async def serve_login():
+    login_file = STATIC_DIR / "login.html"
+    if login_file.exists():
+        return FileResponse(login_file)
+    return FileResponse(STATIC_DIR / "index.html")
+
+@app.get("/register", include_in_schema=False)
+@app.get("/auth/register", include_in_schema=False)
+async def serve_register():
+    return RedirectResponse(url="/auth/login?tab=register", status_code=302)
 
 @app.get("/health", tags=["System"])
 def health_check():

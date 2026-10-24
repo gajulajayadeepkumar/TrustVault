@@ -55,3 +55,26 @@ def reset_rate_limit(key: str):
     """Resets the rate limit counter for a specific key (e.g., upon successful login)."""
     if key in _rate_limit_records:
         del _rate_limit_records[key]
+
+def validate_password_strength(password: str) -> Tuple[bool, str]:
+    """
+    Validates password complexity requirements:
+    - At least 8 characters
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - At least one special symbol
+    """
+    if not password or len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+    if len(password) > 128:
+        return False, "Password must not exceed 128 characters."
+    if not any(c.isupper() for c in password):
+        return False, "Password must contain at least one uppercase letter (A-Z)."
+    if not any(c.islower() for c in password):
+        return False, "Password must contain at least one lowercase letter (a-z)."
+    if not any(c.isdigit() for c in password):
+        return False, "Password must contain at least one number (0-9)."
+    if not any(not c.isalnum() for c in password):
+        return False, "Password must contain at least one special character (e.g., !@#$%^&*)."
+    return True, ""

@@ -2,22 +2,36 @@
 TrustVault Database Seeder
 Populates initial roles, demo accounts, sample confidential documents, and permissions.
 """
+import os
+import sys
 import uuid
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Safe fallback for build-time or non-runtime CLI execution
+os.environ.setdefault("TRUSTVAULT_SECRET_KEY", "build-temporary-seed-key-trustvault")
+
 from app.config import STORAGE_VAULT_DIR, DATABASE_PATH
 from app.database import init_db, get_db_connection
 from app.security import hash_password
 from app.audit import log_audit_event
 
-def seed():
+def seed(force: bool = False):
     print("Initializing Database schema...")
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Clear existing data for fresh reproducible setup
+    cursor.execute("SELECT COUNT(*) FROM users;")
+    user_count = cursor.fetchone()[0]
+
+    if user_count > 0 and not force:
+        print(f"Database already populated ({user_count} users). Skipping destructive seed to preserve data.")
+        conn.close()
+        return
+
+    # Clear existing data for fresh reproducible setup when forced
     cursor.execute("DELETE FROM document_permissions;")
     cursor.execute("DELETE FROM documents;")
     cursor.execute("DELETE FROM sessions;")
@@ -32,6 +46,7 @@ def seed():
     users_to_seed = [
         {
             "username": "admin",
+            "full_name": "System Administrator",
             "email": "admin@trustvault.local",
             "password": "Admin@TrustVault2026!",
             "role": "ADMIN",
@@ -39,6 +54,7 @@ def seed():
         },
         {
             "username": "owner_alice",
+            "full_name": "Alice Document Owner",
             "email": "alice@trustvault.local",
             "password": "Alice@TrustVault2026!",
             "role": "OWNER",
@@ -46,6 +62,7 @@ def seed():
         },
         {
             "username": "viewer_bob",
+            "full_name": "Bob Restricted Viewer",
             "email": "bob@trustvault.local",
             "password": "Bob@TrustVault2026!",
             "role": "VIEWER",
@@ -53,6 +70,7 @@ def seed():
         },
         {
             "username": "charlie",
+            "full_name": "Charlie Engineer",
             "email": "charlie@trustvault.local",
             "password": "Charlie@TrustVault2026!",
             "role": "OWNER",
@@ -64,9 +82,9 @@ def seed():
     for u in users_to_seed:
         pw_hash = hash_password(u["password"])
         cursor.execute("""
-            INSERT INTO users (username, email, password_hash, role, is_active, created_at)
-            VALUES (?, ?, ?, ?, 1, ?)
-        """, (u["username"], u["email"], pw_hash, u["role"], now_utc))
+            INSERT INTO users (username, full_name, email, password_hash, role, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+        """, (u["username"], u["full_name"], u["email"], pw_hash, u["role"], now_utc, now_utc))
         user_ids[u["username"]] = cursor.lastrowid
         print(f"Created user: {u['username']} ({u['role']})")
 
@@ -177,4 +195,5 @@ def seed():
     print("\n--- TrustVault Seed Completed Successfully! ---")
 
 if __name__ == "__main__":
-    seed()
+    force_seed = "--force" in sys.argv
+    seed(force=force_seed)

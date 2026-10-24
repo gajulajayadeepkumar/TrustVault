@@ -28,7 +28,7 @@ def get_current_user_optional(
     
     cursor = db.cursor()
     cursor.execute("""
-        SELECT u.id, u.username, u.email, u.role, u.is_active, s.expires_at, s.id as session_id
+        SELECT u.id, u.username, u.full_name, u.email, u.role, u.is_active, s.expires_at, s.id as session_id
         FROM sessions s
         JOIN users u ON s.user_id = u.id
         WHERE s.token_hash = ?
@@ -52,6 +52,7 @@ def get_current_user_optional(
     return {
         "id": row["id"],
         "username": row["username"],
+        "full_name": row["full_name"] if "full_name" in row.keys() and row["full_name"] else row["username"],
         "email": row["email"],
         "role": row["role"],
         "is_active": bool(row["is_active"]),

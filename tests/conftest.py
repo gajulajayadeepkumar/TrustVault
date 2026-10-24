@@ -9,7 +9,7 @@ from seed_data import seed
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
     """Ensure test database is initialized and seeded before running tests."""
-    seed()
+    seed(force=True)
     yield
 
 @pytest.fixture

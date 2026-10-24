@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication — TrustVault Secure Document Management</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+</head>
+<body class="auth-page">
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <a href="/auth/login" class="brand">
+      <div class="brand-icon">🛡️</div>
+      <div>
+        <div class="brand-title">TrustVault</div>
+        <div class="brand-subtitle">Zero-Trust Document Security</div>
+      </div>
+    </a>
+
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <button type="button" id="navBtnSignIn" class="btn-action active" onclick="switchAuthTab('login')" style="padding: 0.45rem 1rem;">
+        <span>🔒</span> Sign In
+      </button>
+      <button type="button" id="navBtnRegister" class="btn-action primary" onclick="switchAuthTab('register')" style="padding: 0.45rem 1rem;">
+        <span>✨</span> Register
+      </button>
+    </div>
+  </header>
+
+  <!-- Unified Auth Card Container -->
+  <div class="auth-wrapper">
+    <div class="auth-card register-card">
+      <div class="auth-header">
+        <div class="auth-logo-shield">🛡️</div>
+        <h1 class="auth-title" id="authMainTitle">TrustVault Access</h1>
+        <p class="auth-subtitle" id="authMainSubtitle">Zero-Trust Protected Document Repository</p>
+      </div>
+
+      <!-- Integrated Switcher Tabs on Card -->
+      <div class="auth-tabs" role="tablist">
+        <button type="button" id="tabBtnLogin" class="auth-tab-btn active" role="tab" aria-selected="true" onclick="switchAuthTab('login')">
+          <span>🔒</span> Sign In
+        </button>
+        <button type="button" id="tabBtnRegister" class="auth-tab-btn" role="tab" aria-selected="false" onclick="switchAuthTab('register')">
+          <span>✨</span> Register
+        </button>
+      </div>
+
+      <!-- Shared Alert Banner -->
+      <div id="authAlert" class="auth-alert" role="alert">
+        <span id="authAlertIcon" class="auth-alert-icon">⚠️</span>
+        <div id="authAlertMessage"></div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 1: SIGN IN PANEL                                              -->
+      <!-- ================================================================= -->
+      <div id="loginPanel" class="auth-panel active" role="tabpanel">
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)" novalidate>
+          <input type="hidden" id="loginCsrfToken" name="csrf_token" value="">
+
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Email Address</label>
+            <input
+              type="email"
+              id="loginEmail"
+              name="email"
+              class="form-control"
+              placeholder="name@company.com"
+              required
+              autocomplete="email"
+              autofocus
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Password</label>
+            <input
+              type="password"
+              id="loginPassword"
+              name="password"
+              class="form-control"
+              placeholder="Enter secure password"
+              required
+              autocomplete="current-password"
+            >
+          </div>
+
+          <button type="submit" id="loginSubmitBtn" class="btn-verify" style="width: 100%; justify-content: center; margin-top: 1.25rem;">
+            <span>🔒</span> Authenticate to Vault
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Don't have an account? <a href="javascript:void(0)" onclick="switchAuthTab('register')" class="auth-link">Register here</a>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 2: REGISTER PANEL                                             -->
+      <!-- ================================================================= -->
+      <div id="registerPanel" class="auth-panel" role="tabpanel">
+        <form id="registerForm" onsubmit="handleRegisterSubmit(event)" novalidate>
+          <input type="hidden" id="regCsrfToken" name="csrf_token" value="">
+
+          <div class="form-group">
+            <label class="form-label" for="regFullName">Full Name</label>
+            <input
+              type="text"
+              id="regFullName"
+              name="full_name"
+              class="form-control"
+              placeholder="e.g. Sarah Connor"
+              required
+              autocomplete="name"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regEmail">Email Address</label>
+            <input
+              type="email"
+              id="regEmail"
+              name="email"
+              class="form-control"
+              placeholder="sarah@company.com"
+              required
+              autocomplete="email"
+            >
+            <div class="form-hint">Used for zero-trust authorization and audit ledger tracking.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regRole">Requested Role</label>
+            <select id="regRole" name="role" class="form-control" required>
+              <option value="VIEWER" selected>Viewer (Read-only access to specifically shared files)</option>
+              <option value="OWNER">Document Owner (Can upload, manage, and share documents)</option>
+            </select>
+            <div class="form-hint-info">
+              <span>ℹ️</span>
+              <div>Administrator accounts cannot be self-registered and require pre-provisioned administrative authority.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regPassword">Password</label>
+            <input
+              type="password"
+              id="regPassword"
+              name="password"
+              class="form-control"
+              placeholder="Create strong password"
+              required
+              autocomplete="new-password"
+              oninput="checkPasswordStrength()"
+            >
+
+            <!-- Real-Time Password Strength Checklist -->
+            <div class="pwd-checklist" id="pwdChecklist">
+              <div class="pwd-rule" id="ruleLength">
+                <span class="pwd-rule-icon">○</span> At least 8 characters
+              </div>
+              <div class="pwd-rule" id="ruleUpper">
+                <span class="pwd-rule-icon">○</span> Uppercase letter (A-Z)
+              </div>
+              <div class="pwd-rule" id="ruleLower">
+                <span class="pwd-rule-icon">○</span> Lowercase letter (a-z)
+              </div>
+              <div class="pwd-rule" id="ruleDigit">
+                <span class="pwd-rule-icon">○</span> Number (0-9)
+              </div>
+              <div class="pwd-rule" id="ruleSpecial" style="grid-column: span 2;">
+                <span class="pwd-rule-icon">○</span> Special character (!@#$%^&*...)
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regConfirmPassword">Confirm Password</label>
+            <input
+              type="password"
+              id="regConfirmPassword"
+              name="confirm_password"
+              class="form-control"
+              placeholder="Re-enter password"
+              required
+              autocomplete="new-password"
+              oninput="checkPasswordMatch()"
+            >
+            <div id="pwdMatchMsg" class="pwd-match-indicator"></div>
+          </div>
+
+          <button type="submit" id="registerSubmitBtn" class="btn-verify" style="width: 100%; justify-content: center; margin-top: 1.5rem;">
+            <span>✨</span> Create Account
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Already have an account? <a href="javascript:void(0)" onclick="switchAuthTab('login')" class="auth-link">Sign in</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let csrfTokenVal = "";
+
+    // Switch between Sign In and Register tabs seamlessly on the same page
+    function switchAuthTab(tab) {
+      hideAlert();
+      const isLogin = (tab === 'login');
+
+      // Update Card Tab buttons
+      document.getElementById('tabBtnLogin').classList.toggle('active', isLogin);
+      document.getElementById('tabBtnRegister').classList.toggle('active', !isLogin);
+      document.getElementById('tabBtnLogin').setAttribute('aria-selected', isLogin);
+      document.getElementById('tabBtnRegister').setAttribute('aria-selected', !isLogin);
+
+      // Update Nav buttons
+      const navLogin = document.getElementById('navBtnSignIn');
+      const navRegister = document.getElementById('navBtnRegister');
+      if (navLogin && navRegister) {
+        navLogin.className = isLogin ? 'btn-action active' : 'btn-action';
+        navRegister.className = !isLogin ? 'btn-action primary active' : 'btn-action primary';
+      }
+
+      // Update Panels
+      document.getElementById('loginPanel').classList.toggle('active', isLogin);
+      document.getElementById('registerPanel').classList.toggle('active', !isLogin);
+
+      // Update Headings
+      const mainTitle = document.getElementById('authMainTitle');
+      const mainSubtitle = document.getElementById('authMainSubtitle');
+      if (isLogin) {
+        mainTitle.textContent = "TrustVault Sign In";
+        mainSubtitle.textContent = "Zero-Trust Protected Document Repository";
+        document.getElementById('loginEmail').focus();
+      } else {
+        mainTitle.textContent = "Create Your Account";
+        mainSubtitle.textContent = "Join TrustVault with Role-Based Separation";
+        document.getElementById('regFullName').focus();
+      }
+
+      // Keep single URL clean with optional query param
+      const newUrl = isLogin ? '/auth/login' : '/auth/login?tab=register';
+      history.replaceState({ tab: tab }, '', newUrl);
+    }
+
+    async function loadCsrfToken() {
+      try {
+        const res = await fetch("/api/auth/csrf-token");
+        if (res.ok) {
+          const data = await res.json();
+          csrfTokenVal = data.csrf_token;
+          const loginCsrf = document.getElementById("loginCsrfToken");
+          const regCsrf = document.getElementById("regCsrfToken");
+          if (loginCsrf) loginCsrf.value = csrfTokenVal;
+          if (regCsrf) regCsrf.value = csrfTokenVal;
+        }
+      } catch (e) {
+        console.warn("Could not retrieve CSRF token:", e);
+      }
+    }
+
+    async function checkExistingSession() {
+      const token = localStorage.getItem("tv_token");
+      if (!token) return;
+      try {
+        const res = await fetch("/api/auth/me", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const user = await res.json();
+          sessionStorage.setItem("tv_current_role", user.role);
+          window.location.href = "/";
+        } else {
+          localStorage.removeItem("tv_token");
+        }
+      } catch (e) {
+        localStorage.removeItem("tv_token");
+      }
+    }
+
+    function showAlert(message, type = "danger") {
+      const alertBox = document.getElementById("authAlert");
+      const alertMsg = document.getElementById("authAlertMessage");
+      const alertIcon = document.getElementById("authAlertIcon");
+
+      alertBox.className = `auth-alert ${type}`;
+      alertMsg.textContent = message;
+      alertIcon.textContent = type === "success" ? "✓" : "⚠️";
+      alertBox.style.display = "flex";
+      alertBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function hideAlert() {
+      const alertBox = document.getElementById("authAlert");
+      alertBox.style.display = "none";
+    }
+
+    function updateRule(elementId, isValid) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.classList.toggle("valid", isValid);
+      const icon = el.querySelector(".pwd-rule-icon");
+      if (icon) {
+        icon.textContent = isValid ? "✓" : "○";
+      }
+    }
+
+    function checkPasswordStrength() {
+      const val = document.getElementById("regPassword").value;
+      const hasLength = val.length >= 8;
+      const hasUpper = /[A-Z]/.test(val);
+      const hasLower = /[a-z]/.test(val);
+      const hasDigit = /[0-9]/.test(val);
+      const hasSpecial = /[^a-zA-Z0-9]/.test(val);
+
+      updateRule("ruleLength", hasLength);
+      updateRule("ruleUpper", hasUpper);
+      updateRule("ruleLower", hasLower);
+      updateRule("ruleDigit", hasDigit);
+      updateRule("ruleSpecial", hasSpecial);
+
+      checkPasswordMatch();
+      return hasLength && hasUpper && hasLower && hasDigit && hasSpecial;
+    }
+
+    function checkPasswordMatch() {
+      const p1 = document.getElementById("regPassword").value;
+      const p2 = document.getElementById("regConfirmPassword").value;
+      const matchMsg = document.getElementById("pwdMatchMsg");
+
+      if (!p2) {
+        matchMsg.style.display = "none";
+        return false;
+      }
+
+      if (p1 === p2) {
+        matchMsg.className = "pwd-match-indicator matched";
+        matchMsg.textContent = "✓ Passwords match";
+        return true;
+      } else {
+        matchMsg.className = "pwd-match-indicator mismatch";
+        matchMsg.textContent = "⚠️ Passwords do not match";
+        return false;
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      hideAlert();
+
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const submitBtn = document.getElementById("loginSubmitBtn");
+
+      if (!email) {
+        showAlert("Please enter your email address.");
+        document.getElementById("loginEmail").focus();
+        return;
+      }
+      if (!password) {
+        showAlert("Please enter your password.");
+        document.getElementById("loginPassword").focus();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "<span>⏳</span> Verifying Credentials...";
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfTokenVal
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password,
+            csrf_token: csrfTokenVal
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || "Authentication failed. Please verify your credentials.");
+        }
+
+        localStorage.setItem("tv_token", data.token);
+        if (data.user) {
+          sessionStorage.setItem("tv_current_role", data.user.role);
+        }
+
+        showAlert("Authentication verified. Redirecting to vault...", "success");
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 500);
+
+      } catch (err) {
+        showAlert(err.message, "danger");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "<span>🔒</span> Authenticate to Vault";
+      }
+    }
+
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      hideAlert();
+
+      const fullName = document.getElementById("regFullName").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const role = document.getElementById("regRole").value;
+      const password = document.getElementById("regPassword").value;
+      const confirmPassword = document.getElementById("regConfirmPassword").value;
+      const submitBtn = document.getElementById("registerSubmitBtn");
+
+      if (!fullName) {
+        showAlert("Please provide your full name.");
+        document.getElementById("regFullName").focus();
+        return;
+      }
+
+      const emailRegex = /^[\w\.\+\-]+@[a-zA-Z0-9\.\-]+\.[a-zA-Z0-9\-]+$/;
+      if (!email || !emailRegex.test(email)) {
+        showAlert("Please enter a valid email address.");
+        document.getElementById("regEmail").focus();
+        return;
+      }
+
+      if (!checkPasswordStrength()) {
+        showAlert("Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.");
+        document.getElementById("regPassword").focus();
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showAlert("Passwords do not match. Please re-enter.");
+        document.getElementById("regConfirmPassword").focus();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "<span>⏳</span> Creating Account...";
+
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfTokenVal
+          },
+          body: JSON.stringify({
+            full_name: fullName,
+            email: email,
+            role: role,
+            password: password,
+            confirm_password: confirmPassword,
+            csrf_token: csrfTokenVal
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || "Registration failed. Please check your information and try again.");
+        }
+
+        if (data.token) {
+          localStorage.setItem("tv_token", data.token);
+          if (data.user) {
+            sessionStorage.setItem("tv_current_role", data.user.role);
+          }
+        }
+
+        showAlert("Account registered successfully! Redirecting to TrustVault...", "success");
+
+        setTimeout(() => {
+          if (data.token) {
+            window.location.href = "/";
+          } else {
+            switchAuthTab('login');
+            showAlert("Account created! Please sign in with your email and password.", "success");
+          }
+        }, 800);
+
+      } catch (err) {
+        showAlert(err.message, "danger");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "<span>✨</span> Create Account";
+      }
+    }
+
+    // Initialize page
+    window.addEventListener("DOMContentLoaded", () => {
+      loadCsrfToken();
+      checkExistingSession();
+
+      const params = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+      if (params.get("tab") === "register" || hash === "#register") {
+        switchAuthTab("register");
+      } else {
+        switchAuthTab("login");
+      }
+
+      if (params.get("registered") === "1" || params.get("registered") === "success") {
+        showAlert("Account created successfully! Please sign in with your credentials.", "success");
+      }
+    });
+  </script>
+</body>
+</html>
