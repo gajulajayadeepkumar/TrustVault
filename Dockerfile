@@ -29,7 +29,7 @@ RUN useradd -m -u 1001 trustvault && \
 USER trustvault
 
 # Initialize and seed database
-RUN python seed_data.py
+RUN TRUSTVAULT_SECRET_KEY=build-only-not-used python seed_data.py
 
 EXPOSE 8000
 
